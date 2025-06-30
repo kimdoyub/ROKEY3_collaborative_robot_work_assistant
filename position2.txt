@@ -136,11 +136,22 @@ filteroncup=posx(576.13, -157.71, 187.23, 151.25, -90, -179.5)
 
 filterfinishL=posx(576.13, -111.77, 187.24, 151.25, -90, -179.5)
 
+# kettle
+kettlegraspaboveL=posx(757.81, -407.25, 366.32, 124.17, -123.61, 88.04)
+kettlegraspL=posx(757.81, -407.25, 303.65, 124.17, -123.61, 88.04)
+kettleabovefilterL=posx(499.37, -89.98, 366.32, 124.17, -123.61, 88.04)
+kettleabovefilterJ=posj(23.8, 0, 87.25, -55.69, 83.07, -9.97)
+
+kettledrippingon1J=posj(6.02, 7.69, 73.89, -25.85, 84, -24.53)
+kettledrippingon1L=posx(515.02, -92.82, 286.32, 124.65, -150.51, 94.51)
+kettledrippingon2J=posj(-0.89, 1.69, 80.45, -24.04, 80.61, -30.55)
+kettledrippingon2L=posx(475.87, -142.49, 286.32, 124.65, -150.51, 94.51)
+kettledrippingon3J=posj(1.27, 14.7, 65.34, -24.57, 83.39, -29.47)
+kettledrippingon3L=posx(565.53, -126.42, 286.32, 124.65, -150.51, 94.51)
 
 home=posj(0,0,90,0,90,0)
-
-movej(home,vel=30,acc=30)
-movej(filterJ1,vel=30,acc=30)
-movel(filterliftL,vel=30,acc=30)
-movel(filteroutL,vel=30,acc=30)
-movel(filteroncup,vel=30,acc=30)
+#movej(home,vel=30,acc=30)
+#movel(kettlegraspaboveL,vel=30,acc=30)
+movej(kettleabovefilterJ,vel=30,acc=30)
+movel(kettledrippingon1L,vel=30,acc=30)
+movec(kettledrippingon2L,kettledrippingon3L,vel=30, acc=30, angle=1080)
