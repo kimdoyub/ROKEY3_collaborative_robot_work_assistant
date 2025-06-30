@@ -104,25 +104,27 @@ class RobotController(Node):
                     self.get_logger().warn("No target position")
                 else:
                     self.get_logger().info(f"target position: {target_pos}")
+
                     #####################################################
                     ################# Coffee Preparation ################
                     #####################################################
+                    self.init_robot_cup()  # 매 픽앤플레이스 후 초기화
+                    self.pick_and_place_cup(target_pos)
+                    self.pick_and_place_filter()
+                    self.pick_and_place_kettle()
+                    self.pick_and_place_remove_filter()
                     self.init_robot()  # 매 픽앤플레이스 후 초기화
-                    self.prepare_brew()
-                    self.pick_and_place_target(target_pos)
-                    self.brew_coffee()
-                    self.remove_filter()
-                    self.init_robot()  # 매 픽앤플레이스 후 초기화
+
                     #####################################################
                     ################# Cereal Preparation ################
                     #####################################################
                     # init 위치 맞춰줄 것
                     self.init_robot_bowl()
-                    self.pick_and_place_bowl()
+                    self.pick_and_place_cup(target_pos)
                     self.init_robot_cereal()
-                    self.pick_and_place_cereal()
+                    self.pick_and_place_cereal(target_pos)
                     self.init_robot_milk()
-                    self.pick_and_place_milk()
+                    self.pick_and_place_milk(target_pos)
 
 
 
@@ -167,107 +169,117 @@ class RobotController(Node):
     ################# Coffee Preparation Definition ################
     #####################################################3##########
 
-    def prepare_brew(self):
+    def init_robot_cup(self):
         JReady = [0, 0, 90, 0, 90, 0]
         movej(JReady, vel=VELOCITY, acc=ACC)
+        gripper.open_gripper()
+        mwait()
+
+    def pick_and_place_cup(self, target_pos):
+        # JReady = [0, 0, 90, 0, 90, 0]
+        # movej(JReady, vel=VELOCITY, acc=ACC)
         gripper.open_gripper()
         mwait()
 
         # 컵 옮기기
-        movej()
-        movel()
+        movej() # 컵위로 이동 # 좌표 따기
+        movel(target_pos)
         gripper.close_gripper()
         mwait()
-        movel()
+        movel() # 컵위로 이동 # 위에 거 이용
 
-        movej() # 커피 제조 장소
-        movel()
+        movej() # 커피 제조 장소 # 좌표 따기
+        movel() # 내려가기
         gripper.open_gripper()
-        movel()
-        movej(JReady, vel=VELOCITY, acc=ACC)
+        movel() # 커피 제조 장소 # 위에 거 이용
 
-        # Coffee Filter 옮기기
-        movej()
-        movel()
+    def pick_and_place_filter(self):
+        JReady_filter = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11]
+        movej(JReady_filter, vel=VELOCITY, acc=ACC)
+        gripper.open_gripper()
+        mwait()
+
+        # 필터 옮기기
+        movej() # 필터 앞으로 이동 # 좌표 따기
+        movel() # 접근 
         gripper.close_gripper()
         mwait()
-        movel()
+        movel() # 후퇴
 
-        movej()
-        movel()
+        movej() # 커피 제조 장소 # 좌표 따기
+        movel() # 내려가기
         gripper.open_gripper()
-        movel()
-        movej(JReady, vel=VELOCITY, acc=ACC)
+        movel() # 커피 제조 장소 # 위에 거 이용
 
-    # 주어진 좌표로 이동 → 물체 집기 → 그리퍼 열기
-    # 이 단계에서 커피 선택
-    def pick_and_place_target(self, target_pos):
-        JReady = [0, 0, 90, 0, 90, 0]
-        movel(target_pos, vel=VELOCITY, acc=ACC) # 원두 있는 곳으로 이동
-        mwait()
-        gripper.close_gripper() # 잡기
-
-        # 그리퍼 닫힐 때까지 대기
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
-        mwait()
-        movej(JReady, vel=VELOCITY, acc=ACC)
-        movej() # brew area 이동
-        movel() # 붓기 (회전)
-        movel() # brew area 이동
-        movej() # 원위치 윗 부분 이동
-        movel() # 내려 놓을 위치 이동
-        gripper.open_gripper() # 내려놓기
-
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
-
-    def brew_coffee(self):
-        JReady = [0, 0, 90, 0, 90, 0]
-        movej(JReady, vel=VELOCITY, acc=ACC)
+    def pick_and_place_kettle(self):
+        JReady_filter = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11]
+        movej(JReady_filter, vel=VELOCITY, acc=ACC)
         gripper.open_gripper()
         mwait()
-        
-        # kettle
-        movej()
-        movel()
+
+        # 주전자
+        movej() # 주전자 앞으로 이동 # 좌표 따기
+        movel() # 접근 
         gripper.close_gripper()
         mwait()
-        movel()
+        movel() # 후퇴
 
         # coffee brew
-        movej()
-        movec()
+        movel() # 필터 위 이동
+        movec() # brewing
+        movec() # brewing 작은 원
         move_periodic()
         movel()
 
         # returning
-        movej()
-        movel()
+        movej(JReady_filter)
+        movel() # 접근
         gripper.open_gripper()
         mwait()
 
-    def remove_filter(self):
+    def pick_and_place_remove_filter(self):
         JReady = [0, 0, 90, 0, 90, 0]
         movej(JReady, vel=VELOCITY, acc=ACC)
         gripper.open_gripper()
         mwait()
 
         # filter 제거
-        movej()
-        movel()
+        movej() # 필터 근처
+        movel() # 접근
         gripper.close_gripper() # 필터잡기
         mwait()
-        movel()
+        movel() # 후퇴
 
         movej() # 개수대 이동
-        movel()
+        movel() # 접근
         gripper.open_gripper() # 필터 놓기
-        movel()
-        movel()
-        gripper.open_gripper() # 필터 놓기
-        movel()
+        movel() # 후퇴
         movej(JReady, vel=VELOCITY, acc=ACC)
+
+    # 주어진 좌표로 이동 → 물체 집기 → 그리퍼 열기
+    # 이 단계에서 커피 선택
+    # def pick_and_place_target(self, target_pos):
+    #     JReady = [0, 0, 90, 0, 90, 0]
+    #     movel(target_pos, vel=VELOCITY, acc=ACC) # 원두 있는 곳으로 이동
+    #     mwait()
+    #     gripper.close_gripper() # 잡기
+
+    #     # 그리퍼 닫힐 때까지 대기
+    #     while gripper.get_status()[0]:
+    #         time.sleep(0.5)
+    #     mwait()
+    #     movej(JReady, vel=VELOCITY, acc=ACC)
+    #     movej() # brew area 이동
+    #     movel() # 붓기 (회전)
+    #     movel() # brew area 이동
+    #     movej() # 원위치 윗 부분 이동
+    #     movel() # 내려 놓을 위치 이동
+    #     gripper.open_gripper() # 내려놓기
+
+    #     while gripper.get_status()[0]:
+    #         time.sleep(0.5)
+
+
 
     ################################################################
     ################# Cereal Preparation Definition ################
