@@ -188,10 +188,10 @@ class RobotController(Node):
         mwait()
         movel() # 컵위로 이동 # 위에 거 이용
 
-        movej() # 커피 제조 장소 # 좌표 따기
-        movel() # 내려가기
+        movej(posj(-1.22, 14.22, 85.93, -0.13, 80.37, -1.73)) # 커피 제조 장소 # 좌표 따기
+        movel(posx(459.3, -2.79, 49.6, 5.89, -179.63, 5.2)) # 내려가기
         gripper.open_gripper()
-        movel() # 커피 제조 장소 # 위에 거 이용
+        movej(posj(-1.22, 14.22, 85.93, -0.13, 80.37, -1.73))
 
     def pick_and_place_filter(self):
         JReady_filter = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11]
@@ -200,13 +200,13 @@ class RobotController(Node):
         mwait()
 
         # 필터 옮기기
-        movej() # 필터 앞으로 이동 # 좌표 따기
-        movel() # 접근 
+        movej(posj(-70.38, 17.38, 33.12, -0.51, 129.5, -68.83)) # 필터 앞으로 이동 # 좌표 따기
+        movel(posx(137.61, -381.92, 306.78, 105.11, -180, 106.75)) # 접근 
         gripper.close_gripper()
         mwait()
-        movel() # 후퇴
+        movej(posj(-70.38, 17.38, 33.12, -0.51, 129.5, -68.83)) # 필터 앞으로 이동 # 좌표 따기
 
-        movej() # 커피 제조 장소 # 좌표 따기
+        movej(posj(-1.22, 14.22, 85.93, -0.13, 80.37, -1.73)) # 커피 제조 장소 # 좌표 따기
         movel() # 내려가기
         gripper.open_gripper()
         movel() # 커피 제조 장소 # 위에 거 이용
@@ -218,11 +218,11 @@ class RobotController(Node):
         mwait()
 
         # 주전자
-        movej() # 주전자 앞으로 이동 # 좌표 따기
-        movel() # 접근 
+        movej(posj(-70.38, 17.38, 33.12, -0.51, 129.5, -68.83)) # 주전자 앞으로 이동 # 좌표 따기
+        movel(posx(137.61, -381.92, 306.78, 105.11, -180, 106.75)) # 접근 
         gripper.close_gripper()
         mwait()
-        movel() # 후퇴
+        movej(posj(-70.38, 17.38, 33.12, -0.51, 129.5, -68.83)) # 필터 앞으로 이동 # 좌표 따기
 
         # coffee brew
         movel() # 필터 위 이동
