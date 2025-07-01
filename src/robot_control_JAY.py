@@ -118,19 +118,16 @@ class RobotController(Node):
         ################# Coffee Preparation ################
         #####################################################
         self.init_robot_cup()  # 매 픽앤플레이스 후 초기화
-        self.pick_and_place_cup()
-        self.init_robot()
-        self.pick_and_place_filter()
+        # self.pick_and_place_cup()
+        # self.init_robot()
+        # self.pick_and_place_filter()
         if self.extraction_test[0]:
             self.coffee_flavor = self.extraction_test[2]
         else:
             self.get_logger().info('Coffee Keyword not received')
-        self.pick_and_place_bean(self.coffee_flavor)
-        self.pick_and_place_kettle()
-
-
-
-        # self.pick_and_place_remove_filter()
+        # self.pick_and_place_bean(self.coffee_flavor)
+        # self.pick_and_place_kettle()
+        self.pick_and_place_remove_filter()
         # self.init_robot()  # 매 픽앤플레이스 후 초기화
 
         # #####################################################
@@ -206,7 +203,7 @@ class RobotController(Node):
         gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
-        movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
 
         movel(posx(576.13, -111.77, 187.24, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         movej([0, 0, 90, 0, 90, 0], vel=VELOCITY, acc=ACC)
@@ -258,7 +255,7 @@ class RobotController(Node):
         kettledrippingon3L=posx(565.53, -126.42, 286.32, 124.65, -150.51, 94.51)
         movej(kettleabovefilterJ,vel=VELOCITY, acc=ACC)
         movel(kettledrippingon1L,vel=VELOCITY, acc=ACC)
-        movec(kettledrippingon2L,kettledrippingon3L,vel=VELOCITY, acc=ACC, angle=1080)
+        movec(kettledrippingon2L,kettledrippingon3L,vel=VELOCITY, acc=ACC, angle=1080) # 수정 필요
         movel(posx(499.37, -89.98, 366.32, 124.17, -123.61, 88.04), vel=VELOCITY, acc=ACC)
         movel(posx(757.81, -407.25, 366.32, 124.17, -123.61, 88.04), vel=VELOCITY, acc=ACC)
         movel(posx(757.81, -407.25, 303.65, 124.17, -123.61, 88.04), vel=VELOCITY, acc=ACC)
@@ -266,21 +263,44 @@ class RobotController(Node):
 
     def pick_and_place_remove_filter(self):
         JReady = [0, 0, 90, 0, 90, 0]
-        movej(JReady, vel=VELOCITY, acc=ACC)
-        movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # movej(JReady, vel=VELOCITY, acc=ACC)
+        movel(posx(757.81, -407.25, 303.65, 124.17, -123.61, 88.04), vel=VELOCITY, acc=ACC)
+        movel(posx(757.81, -407.25, 366.32, 124.17, -123.61, 88.04), vel=VELOCITY, acc=ACC)
+        movel(posx(499.37, -89.98, 366.32, 124.17, -123.61, 88.04), vel=VELOCITY, acc=ACC)
         movel(posx(576.13, -111.77, 187.24, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        movel(posx(545.13, -137.5, 190, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         gripper.close_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
         movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
-        movel(posx(545.13, -137.5, 190, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
-        movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         movel(posx(642.32, -343.08, 375.0, 151.58, -90, 180), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
-        movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC)
+        movel(posx(646.99, -333.08, 352.71, 152.17, -88.88, -179.75), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
+        movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC) # movel로 따기
         gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
+        movel(posx(642.31, -190.70, 341.91, 151.58, -90, 180.0), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
         movej(JReady, vel=VELOCITY, acc=ACC)
+
+
+
+
+
+
+        # movel(posx(576.13, -111.77, 187.24, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # gripper.close_gripper()
+        # while gripper.get_status()[0]:
+        #     time.sleep(0.5)
+        # movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # movel(posx(545.13, -137.5, 190, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        # movel(posx(642.32, -343.08, 375.0, 151.58, -90, 180), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
+        # movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC)
+        # gripper.open_gripper()
+        # while gripper.get_status()[0]:
+        #     time.sleep(0.5)
+        # movej(JReady, vel=VELOCITY, acc=ACC)
 
     ################################################################
     ################# Cereal Preparation Definition ################
