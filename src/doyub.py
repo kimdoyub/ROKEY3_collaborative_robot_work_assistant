@@ -1,0 +1,329 @@
+import os
+import time
+import sys
+import cv2
+import numpy as np
+from ultralytics import YOLO
+from scipy.spatial.transform import Rotation
+
+import rclpy
+from rclpy.node import Node
+import DR_init
+
+from od_msg.srv import SrvDepthPosition
+from robot_control.onrobot import RG
+from ament_index_python.packages import get_package_share_directory
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+
+# ================= 기본 설정 =================
+ROBOT_ID = "dsr01"
+ROBOT_MODEL = "m0609"
+VELOCITY, ACC = 60, 60
+GRIPPER_NAME = "rg2"
+TOOLCHARGER_IP = "192.168.1.1"
+TOOLCHARGER_PORT = "502"
+DEPTH_OFFSET = -5.0
+MIN_DEPTH = 2.0
+ANGLE_THRESHOLD = 45.0
+###### yolo 인식 좌표 찾기###########
+BED_POSITION = [366.91, 88.86, 181.33, 41.85, -179.84, 41.94]
+YOLO_MODEL_PATH = "/home/rokey/ros2_ws/src/DoosanBootcamp3rd/dsr_rokey/pick_and_place_text/resource/best_grand_final.pt"
+
+package_path = get_package_share_directory("pick_and_place_voice")
+
+DR_init.__dsr__id = ROBOT_ID
+DR_init.__dsr__model = ROBOT_MODEL
+
+rclpy.init()
+dsr_node = rclpy.create_node("robot_control_node", namespace=ROBOT_ID)
+DR_init.__dsr__node = dsr_node
+
+try:
+    from DSR_ROBOT2 import movej, movel, get_current_posx, mwait, trans
+except ImportError as e:
+    print(f"Error importing DSR_ROBOT2: {e}")
+    sys.exit()
+
+gripper = RG(GRIPPER_NAME, TOOLCHARGER_IP, TOOLCHARGER_PORT)
+# ================= 로봇 제어 클래스 =================
+class RobotController(Node):
+
+    def __init__(self):
+        super().__init__("yolo_robot_controller")
+        self.init_robot()
+        self.model = YOLO(YOLO_MODEL_PATH)
+
+        self.bridge = CvBridge()
+        self.depth_image = None
+        self.depth_sub = self.create_subscription(
+            Image,
+            "/camera/depth/image_rect_raw",
+            self.depth_callback,
+            10
+        )
+
+        self.get_position_client = self.create_client(
+            SrvDepthPosition, "/get_3d_position"
+        )
+        self.rgb_image = None
+
+        self.rgb_sub = self.create_subscription(
+            Image,
+            "/camera/camera/color/image_raw",  # ✅ 당신이 보여준 토픽
+            self.rgb_callback,
+            10
+        )
+
+        
+    def depth_callback(self, msg):
+        try:
+            self.depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
+        except Exception as e:
+            self.get_logger().error(f"Depth callback error: {e}")
+
+    def rgb_callback(self, msg):
+        try:
+            self.rgb_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        except Exception as e:
+            self.get_logger().error(f"RGB callback error: {e}")
+
+    def get_depth_from_sensor(self, x, y):
+        if self.depth_image is None:
+            self.get_logger().warn("Depth image not received yet.")
+            return 0.0
+
+        h, w = self.depth_image.shape
+        x = int(np.clip(x, 0, w - 1))
+        y = int(np.clip(y, 0, h - 1))
+
+        depth = self.depth_image[y, x]
+        
+        if np.isnan(depth) or depth == 0:
+            self.get_logger().warn(f"Invalid depth at ({x}, {y})")
+            return 0.0
+
+        return float(depth)
+
+    def convert_pixel_to_3d(self, x, y, depth, fx=600, fy=600, cx=320, cy=240):
+        X = (x - cx) * depth / fx
+        Y = (y - cy) * depth / fy
+        Z = depth
+        return [X, Y, Z]
+
+    def mask_white_area_hsv(self, image):
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        lower_white = np.array([90, 0, 80])
+        upper_white = np.array([120, 90, 200])
+        lower2 = np.array([149, 52, 65])
+        upper2 = np.array([169, 132, 145])
+        mask1 = cv2.inRange(hsv, lower_white, upper_white)
+        mask2 = cv2.inRange(hsv, lower2, upper2)
+        return cv2.bitwise_or(mask1, mask2)
+
+
+    def get_robot_pose_matrix(self, x, y, z, rx, ry, rz):
+        R = Rotation.from_euler("ZYZ", [rx, ry, rz], degrees=True).as_matrix()
+        T = np.eye(4)
+        T[:3, :3] = R
+        T[:3, 3] = [x, y, z]
+        return T
+    
+    def transform_to_base(self, camera_coords, gripper2cam_path, robot_pos):
+        """
+        Converts 3D coordinates from the camera coordinate system
+        to the robot's base coordinate system.
+        """
+        gripper2cam = np.load(gripper2cam_path)
+        coord = np.append(np.array(camera_coords), 1)  # Homogeneous coordinate
+
+        x, y, z, rx, ry, rz = robot_pos
+        base2gripper = self.get_robot_pose_matrix(x, y, z, rx, ry, rz)
+
+        # 좌표 변환 (그리퍼 → 베이스)
+        base2cam = base2gripper @ gripper2cam
+        td_coord = np.dot(base2cam, coord)
+
+        return td_coord[:3]
+
+
+    def init_robot(self):
+        movej([0, 0, 90, 0, 90, 0], vel=VELOCITY, acc=ACC)
+        gripper.open_gripper()
+        mwait()
+
+    def pick_and_place(self, pick_pose, place_pose):
+        movel(pick_pose, vel=VELOCITY, acc=ACC)
+        mwait()
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.2)
+        mwait()
+        movel(place_pose, vel=VELOCITY, acc=ACC)
+        mwait()
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.2)
+        mwait()
+
+    def pat_motion(self, pos):
+        ##########################토닥이기 위 아래 좌표 잡기##################
+        top = [pos[0], pos[1], pos[2]-120, *pos[3:]]
+        bottom = [pos[0], pos[1], pos[2] -140, *pos[3:]]
+
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.2)
+
+        for _ in range(3):
+            movel(bottom, vel=VELOCITY, acc=ACC)
+            mwait()
+            movel(top, vel=VELOCITY, acc=ACC)
+            mwait()
+
+    def run_yolo_control(self):
+        while True:
+            if self.rgb_image is None:
+                self.get_logger().warn("RGB image not received yet.")
+                rclpy.spin_once(self, timeout_sec=0.1)
+                continue            
+
+            frame = self.rgb_image.copy()  # 최신 프레임 복사
+            results = self.model(frame)[0]
+            boxes = results.boxes.xyxy.cpu().numpy()
+            classes = results.boxes.cls.cpu().numpy().astype(int)
+            names = results.names
+
+            bed_box = pillow_box = blanket_box = None
+            center = angle = None
+
+            for i, box in enumerate(boxes):
+                label = names[classes[i]]
+                x1, y1, x2, y2 = box.astype(int)
+                if label == "bed":
+                    bed_box = (x1, y1, x2, y2)
+                elif label == "pillow":
+                    pillow_box = (x1, y1, x2, y2)
+                elif label == "blanket":
+                    blanket_box = (x1, y1, x2, y2)
+                    cx, cy, angle = self.get_blanket_angle_and_center(frame, x1, y1, x2, y2)
+                    center = (cx, cy)
+            
+            gripper2cam_path = os.path.join(package_path, "resource", "T_gripper2camera.npy")
+            robot_pos = get_current_posx()[0]
+
+            if blanket_box and not bed_box and not pillow_box:
+                print("정렬완료")
+                self.pat_motion(BED_POSITION)
+                break
+
+            elif blanket_box and pillow_box and not bed_box:
+                print("이불만 침대 위에")
+                px = (pillow_box[0] + pillow_box[2]) // 2
+                py = (pillow_box[1] + pillow_box[3]) // 2
+                depth = self.get_depth_from_sensor(px, py)
+                cam_coords = self.convert_pixel_to_3d(px, py, depth)
+                pillow_pos = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos) + robot_pos[3:]
+                break
+
+            elif blanket_box and pillow_box and bed_box:
+                print("다 어질러짐")
+                px = (pillow_box[0] + pillow_box[2]) // 2
+                py = (pillow_box[1] + pillow_box[3]) // 2
+                bx1, by1, bx2, by2 = bed_box
+
+                if bx1 <= px <= bx2 and by1 <= py <= by2:
+                    print("배개는 침대 위에")
+                    depth = self.get_depth_from_sensor(px, py)
+                    cam_coords = self.convert_pixel_to_3d(px, py, depth)
+                    pillow_pos = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos) + robot_pos[3:]
+
+                    print("배개 치우기")
+                    TEMP_POS = [pillow_pos[0], pillow_pos[1] + 100, pillow_pos[2], 0, 0, 0]
+                    self.pick_and_place(pillow_pos, TEMP_POS)
+
+                    x, y = int(center[0]), int(center[1])
+                    depth = self.get_depth_from_sensor(x, y)
+                    cam_coords = self.convert_pixel_to_3d(x, y, depth)
+                    blanket_xyz = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos)
+                    blanket_pos = list(blanket_xyz) + list(robot_pos[3:])
+                    print("이불 ")
+                    if angle > 90 - ANGLE_THRESHOLD and angle < 90 + ANGLE_THRESHOLD:
+                        #############그리퍼 방향 돌리기#############
+                        print("돌려")
+                    print("집기")
+                    self.pick_and_place(blanket_pos, BED_POSITION)
+                    self.pat_motion(BED_POSITION)
+
+                    print("배개 집기")
+                    self.pick_and_place(TEMP_POS, BED_POSITION)
+                    break
+
+                else:
+                    print("배개도 침대 아래")
+                    x, y = int(center[0]), int(center[1])
+                    depth = self.get_depth_from_sensor(x, y)
+                    cam_coords = self.convert_pixel_to_3d(x, y, depth)
+                    blanket_xyz = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos)
+                    blanket_pos = list(blanket_xyz) + list(robot_pos[3:])
+                    print("이불 ")
+                    if angle > 90 - ANGLE_THRESHOLD and angle < 90 + ANGLE_THRESHOLD:
+                        #############그리퍼 방향 돌리기#############
+                        print("돌려")
+
+                    print("집기")
+                    self.pick_and_place(blanket_pos, BED_POSITION)
+                    self.pat_motion(BED_POSITION)
+
+                    print("배개 집기")
+                    depth = self.get_depth_from_sensor(px, py)
+                    cam_coords = self.convert_pixel_to_3d(px, py, depth)
+                    pillow_pos = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos) + robot_pos[3:]
+
+                    self.pick_and_place(pillow_pos, BED_POSITION)
+                    break
+
+            elif blanket_box and not pillow_box and not bed_box:
+                break
+
+            cv2.imshow("YOLO Detection", frame)
+            if cv2.waitKey(1) & 0xFF == 27:
+                break
+
+        cv2.destroyAllWindows()
+
+    def get_blanket_angle_and_center(self, frame, x1, y1, x2, y2):
+        margin = 0.15
+        dx, dy = int((x2 - x1) * margin), int((y2 - y1) * margin)
+        x1e, y1e = max(x1 - dx, 0), max(y1 - dy, 0)
+        x2e, y2e = min(x2 + dx, frame.shape[1] - 1), min(y2 + dy, frame.shape[0] - 1)
+        roi = frame[y1e:y2e, x1e:x2e]
+        masked = self.mask_white_area_hsv(roi)
+        contours, _ = cv2.findContours(masked, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        filtered = [cnt for cnt in contours if cv2.contourArea(cnt) > 300]
+        if not filtered:
+            return (x1 + x2) // 2, (y1 + y2) // 2, 0
+        all_pts = np.vstack(filtered)
+        rect = cv2.minAreaRect(all_pts)
+        (cx, cy), (w, h), angle = rect
+        if w < h:
+            angle += 90
+        return cx + x1e, cy + y1e, angle
+    
+    def robot_control(self):
+        movej([0,0,90,0,90,0], vel=VELOCITY, acc=ACC)
+        print("1")
+        self.run_yolo_control()
+
+
+
+# ================= main =================
+def main():
+    node = RobotController()
+    while rclpy.ok():
+        node.robot_control()
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == "__main__":
+    main()
