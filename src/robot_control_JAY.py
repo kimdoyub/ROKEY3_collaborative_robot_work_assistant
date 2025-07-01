@@ -267,20 +267,19 @@ class RobotController(Node):
     def pick_and_place_remove_filter(self):
         JReady = [0, 0, 90, 0, 90, 0]
         movej(JReady, vel=VELOCITY, acc=ACC)
+        movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        movel(posx(576.13, -111.77, 187.24, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+        movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        movel(posx(545.13, -137.5, 190, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
+        movel(posx(642.32, -343.08, 375.0, 151.58, -90, 180), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
+        movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC)
         gripper.open_gripper()
-        mwait()
-
-        # filter 제거
-        movej() # 필터 근처
-        movel() # 접근
-        gripper.close_gripper() # 필터잡기
-        mwait()
-        movel() # 후퇴
-
-        movej() # 개수대 이동
-        movel() # 접근
-        gripper.open_gripper() # 필터 놓기
-        movel() # 후퇴
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
         movej(JReady, vel=VELOCITY, acc=ACC)
 
     ################################################################
