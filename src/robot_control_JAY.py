@@ -118,15 +118,15 @@ class RobotController(Node):
         ################# Coffee Preparation ################
         #####################################################
         self.init_robot_cup()  # 매 픽앤플레이스 후 초기화
-        # self.pick_and_place_cup()
-        # self.init_robot()
-        # self.pick_and_place_filter()
+        self.pick_and_place_cup()
+        self.init_robot()
+        self.pick_and_place_filter()
         if self.extraction_test[0]:
             self.coffee_flavor = self.extraction_test[2]
         else:
             self.get_logger().info('Coffee Keyword not received')
         self.pick_and_place_bean(self.coffee_flavor)
-        # self.pick_and_place_kettle()
+        self.pick_and_place_kettle()
 
 
 
@@ -180,20 +180,20 @@ class RobotController(Node):
         while gripper.get_status()[0]:
             time.sleep(0.5)
         #################################
-    #     gripper.close_gripper()
-    #     while gripper.get_status()[0]:
-    #         time.sleep(0.5)
-    #     mwait()
-    #     mwait()
+        #     gripper.close_gripper()
+        #     while gripper.get_status()[0]:
+        #         time.sleep(0.5)
+        #     mwait()
+        #     mwait()
 
 
-    #     movej(posj(37.61, 10.65, 84.71, -0.05, 84.61, 37.58), vel=VELOCITY, acc=ACC) # 커피 제조 장소 # 좌표 따기
-    #     movel(posx(345.72, 275.72, 44.08, 69.81, 179.96, 69.63), vel=VELOCITY, acc=ACC) # 내려가기  ############## force control로 바꾸기
-    #     gripper.open_gripper()
-    #     while gripper.get_status()[0]:
-    #         time.sleep(0.5)
-    #     movel(posx(345.71, 275.71, 148.61, 72.27, 179.97, 72.09), vel=VELOCITY, acc=ACC) # 커피 제조 장소 # 위에 거 이용
-    #     # movej(posj(19.69, 15.77, 71.8, -0.06, 92.41, 19.66), vel=VELOCITY, acc=ACC)
+        #     movej(posj(37.61, 10.65, 84.71, -0.05, 84.61, 37.58), vel=VELOCITY, acc=ACC) # 커피 제조 장소 # 좌표 따기
+        #     movel(posx(345.72, 275.72, 44.08, 69.81, 179.96, 69.63), vel=VELOCITY, acc=ACC) # 내려가기  ############## force control로 바꾸기
+        #     gripper.open_gripper()
+        #     while gripper.get_status()[0]:
+        #         time.sleep(0.5)
+        #     movel(posx(345.71, 275.71, 148.61, 72.27, 179.97, 72.09), vel=VELOCITY, acc=ACC) # 커피 제조 장소 # 위에 거 이용
+        #     # movej(posj(19.69, 15.77, 71.8, -0.06, 92.41, 19.66), vel=VELOCITY, acc=ACC)
 
     def pick_and_place_filter(self):
         movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC)
@@ -212,19 +212,23 @@ class RobotController(Node):
         movej([0, 0, 90, 0, 90, 0], vel=VELOCITY, acc=ACC)
 
     def pick_and_place_bean(self, target_name):
-        JReady_bean = posj(0, -20, 130, 0, 20, 90)
-        movej(JReady_bean, vel=VELOCITY, acc=ACC)
         gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
+        JReady_bean = posj(0, -20, 130, 0, 20, 90)
+        movej(JReady_bean, vel=VELOCITY, acc=ACC)
         if target_name:
             self.target_pos = self.get_target_pos(target_name)
+            self.target_pos[0] += 40
+            self.target_pos[2] -= 20
         movel(self.target_pos, vel=VELOCITY, acc=ACC)
         gripper.close_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
         movej(JReady_bean, vel=VELOCITY, acc=ACC)
-        movej(posj(11.07, 14.34, 103.04, 132.51, -79.3, 27.66), vel=VELOCITY, acc=ACC)   
+        # movel(posx(515.02, -92.82, 286.32, -124.65, 150.51, -94.51), vel=VELOCITY, acc=ACC)   
+        movel(posx(532.0,-71.94,297.55,72.85,-132.56,-93.62), vel=20, acc=ACC)
+        movel(posx(540.90,-85.24,238.63,112.60,167.51,-49.5), vel=VELOCITY, acc=ACC)
         mwait(3)  
         movej(JReady_bean, vel=VELOCITY, acc=ACC)
         movel(self.target_pos, vel=VELOCITY, acc=ACC)
