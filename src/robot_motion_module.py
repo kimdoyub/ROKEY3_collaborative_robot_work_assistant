@@ -17,16 +17,10 @@ from robot_control.onrobot import RG  # OnRobot 그리퍼 컨트롤 클래스
 package_path = get_package_share_directory("pick_and_place_voice")
 
 class RobotMotion():
-    def __init__(self):
-        super().__init__("motion_test_node")
+    def __init__(self, extraction): # LLM 통해서 추출한 LIST가 extraction
+        super().__init__("motion_module")
         self.init_robot()  # 로봇 초기 위치로 이동 및 그리퍼 open
-
-        self.get_position_client = self.create_client(SrvDepthPosition, "/get_3d_position")
-        while not self.get_position_client.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info("Waiting for get_depth_position service...")
-
-        self.get_position_request = SrvDepthPosition.Request()
-        self.extraction_test = [True, True, 'bitter', 'choco']
+        self.extraction_test = extraction
         self.target_pos = []
 
     # 위치(x,y,z) + 회전(rx,ry,rz) 정보를 4x4 변환 행렬로 변환
@@ -50,10 +44,10 @@ class RobotMotion():
 
         return td_coord[:3]
 
-    def get_target_pos(self, target):
+    def get_target_pos(self, target): # YOLO 통해서 target 위치 수신 (YOLO 필요함) 수정 필요
         self.get_position_request.target = target
         self.get_logger().info("call depth position service with object_detection node")
-        get_position_future = self.get_position_client.call_async(self.get_position_request)
+        get_position_future = self.get_position_client.call_async(self.get_position_request) # YOLO 통해서 target 위치
         rclpy.spin_until_future_complete(self, get_position_future)
 
         if get_position_future.result():
@@ -80,28 +74,34 @@ class RobotMotion():
         gripper.open_gripper()
         mwait()
 
-    # 메인 음성인식 및 pick & place 로직
+    # ROBOT MOTION
     def robot_control(self): ##### Main Code #####
 
         #####################################################
         ################# Coffee Preparation ################
         #####################################################
-        self.init_robot_cup()  # 매 픽앤플레이스 후 초기화
-        self.pick_and_place_cup()
-        self.init_robot()
-        self.pick_and_place_filter()
+        self.init_robot_cup()  # cup 위치 초기화
+        self.pick_and_place_cup() # cup 가져와서 두기
+        self.init_robot() # 위치 초기화
+        self.pick_and_place_filter() # filter 가져와서 두기
+        
+        # 커피 정보 관련
         if self.extraction_test[0]:
             self.coffee_flavor = self.extraction_test[2]
         else:
             self.get_logger().info('Coffee Keyword not received')
-        self.pick_and_place_bean(self.coffee_flavor)
-        self.pick_and_place_kettle()
-        # self.pick_and_place_remove_filter()
+        
+        self.pick_and_place_bean(self.coffee_flavor) # coffee bean 붓기
+        self.pick_and_place_kettle() # kettle move and brew
+        # self.pick_and_place_remove_filter() filter 제거하기
         # self.init_robot()  # 매 픽앤플레이스 후 초기화
 
         # #####################################################
         # ################# Cereal Preparation ################
         # #####################################################
+        # 완성되고 주석 풀 예정
+
+
         # # init 위치 맞춰줄 것
         # self.init_robot_bowl()
         # self.pick_and_place_cup()
@@ -110,9 +110,9 @@ class RobotMotion():
         # self.init_robot_milk()
         # self.pick_and_place_milk()
 
-        ################################################################
-        ################# Coffee Preparation Definition ################
-        #####################################################3##########
+    ################################################################
+    ################# Coffee Preparation Definition ################
+    #####################################################3##########
 
     def init_robot_cup(self):
         JReady = [0, 0, 90, 0, 90, 0]
@@ -148,12 +148,6 @@ class RobotMotion():
 
         movel(posx(576.13, -111.77, 187.24, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         movej([0, 0, 90, 0, 90, 0], vel=VELOCITY, acc=ACC)
-
-    def pick_and_place_bean(self, target_name):
-        gripper.open_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
-        JReady_bean = posj(0, -20, 130, 0, 20, 90)
         movej(JReady_bean, vel=VELOCITY, acc=ACC)
         if target_name:
             self.target_pos = self.get_target_pos(target_name)
@@ -224,7 +218,7 @@ class RobotMotion():
     ################################################################
     ################# Cereal Preparation Definition ################
     ################################################################
-            # JReady_cereal = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11] # Cereal 인식 위치
+    # JReady_cereal = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11] # Cereal 인식 위치
 
     def init_robot_bowl(self):
         JReady = [0, 0, 90, 0, 90, 0]
