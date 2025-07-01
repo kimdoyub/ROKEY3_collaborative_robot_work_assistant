@@ -16,7 +16,7 @@ from robot_control.onrobot import RG  # OnRobot 그리퍼 컨트롤 클래스
 # 패키지 경로 가져오기
 package_path = get_package_share_directory("pick_and_place_voice")
 
-class robotmotion():
+class RobotMotion():
     def __init__(self):
         super().__init__("motion_test_node")
         self.init_robot()  # 로봇 초기 위치로 이동 및 그리퍼 open
