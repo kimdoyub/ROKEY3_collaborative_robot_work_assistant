@@ -299,7 +299,6 @@ class RobotController(Node):
         movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         movel(posx(642.32, -343.08, 375.0, 151.58, -90, 180), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
         movel(posx(646.99, -333.08, 352.71, 152.17, -88.88, -179.75), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
-        movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC) # movel로 따기
         gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
