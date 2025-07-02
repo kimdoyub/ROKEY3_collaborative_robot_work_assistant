@@ -15,21 +15,27 @@ class RunMenuService(Node):
         print(222)
 
 
-    def call_subject_service(self,result):
+    def call_subject_service(self, result):
+        print("call_subject_service 실행")
         client = self.create_client(Srvchat, '/robot_test')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().warn(f"robot_test 서비스를 기다리는 중...")
 
         request = Srvchat.Request()
         request.result = result
-
         future = client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        if future.result():
-            res = future.result()
-            self.get_logger().info(f"✅ 서비스 완료: {res.feedback}")
-        else:
-            self.get_logger().error("❌ 서비스 호출 실패")
+
+        def done_callback(future):
+            try:
+                res = future.result()
+                self.get_logger().info(f"✅ 서비스 완료: {res.feedback}")
+            except Exception as e:
+                self.get_logger().error(f"❌ 응답 처리 중 예외: {e}")
+
+        future.add_done_callback(done_callback)
+        return True  # 비동기이므로 바로 True 반환
+
+
 
     def handle_run_menu(self, request, response):
         self.get_logger().info(f"✅ [meal] 요청 수신: {request.result}")
@@ -68,8 +74,8 @@ class RunMenuService(Node):
             menu_list.append(target.strip().split(' ')[0])
             menu_list.append(None)
         elif coffee == True and cereal == True:
-            menu_list.append(target.strip().split(' ')[0])
-            menu_list.append(target.strip().split(' ')[1])
+            menu_list.append(tool_dict[target.strip().split(' ')[0]])
+            menu_list.append(tool_dict[target.strip().split(' ')[1]])
         elif coffee == False and cereal == True:
             menu_list.append(None)
             menu_list.append(target.strip().split(' ')[0])
@@ -77,8 +83,13 @@ class RunMenuService(Node):
             pass
         print(menu_list)
         print('-동작대기-')
-        self.call_subject_service(str(menu_list))
+        answer = self.call_subject_service(str(menu_list))
         print('-동작완료-')
+        print(answer)
+        if not answer:
+            response.success = False
+            response.feedback = "하위 동작 실패"
+            return response
         # get_keyword
         print(menu_list)
         response.success = True
