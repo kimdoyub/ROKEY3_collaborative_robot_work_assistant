@@ -26,7 +26,6 @@ TOOLCHARGER_PORT = "502"
 DEPTH_OFFSET = -5.0
 MIN_DEPTH = 2.0
 ANGLE_THRESHOLD = 45.0
-###### yolo 인식 좌표 찾기###########
 BED_POSITION = [366.91, 88.86, 181.33, 41.85, -179.84, 41.94]
 YOLO_MODEL_PATH = "/home/rokey/ros2_ws/src/DoosanBootcamp3rd/dsr_rokey/pick_and_place_text/resource/best_grand_final.pt"
 
@@ -40,7 +39,8 @@ dsr_node = rclpy.create_node("robot_control_node", namespace=ROBOT_ID)
 DR_init.__dsr__node = dsr_node
 
 try:
-    from DSR_ROBOT2 import movej, movel, get_current_posx, mwait, trans
+    from DSR_ROBOT2 import movej, movel, get_current_posx, mwait, trans, movec, move_periodic,get_current_posj
+    from DR_common2 import posx, posj
 except ImportError as e:
     print(f"Error importing DSR_ROBOT2: {e}")
     sys.exit()
@@ -66,14 +66,22 @@ class RobotController(Node):
         self.get_position_client = self.create_client(
             SrvDepthPosition, "/get_3d_position"
         )
+        while not self.get_position_client.wait_for_service(timeout_sec=3.0):
+            self.get_logger().info("Waiting for get_depth_position service...")
+
+        
+        self.get_position_request = SrvDepthPosition.Request()
+            
         self.rgb_image = None
+        
 
         self.rgb_sub = self.create_subscription(
             Image,
-            "/camera/camera/color/image_raw",  # ✅ 당신이 보여준 토픽
+            "/camera/camera/color/image_raw",  
             self.rgb_callback,
             10
         )
+        self.extraction_test = ["pillow", 'blanket', 'bed']
 
         
     def depth_callback(self, msg):
@@ -98,7 +106,6 @@ class RobotController(Node):
         y = int(np.clip(y, 0, h - 1))
 
         depth = self.depth_image[y, x]
-        
         if np.isnan(depth) or depth == 0:
             self.get_logger().warn(f"Invalid depth at ({x}, {y})")
             return 0.0
@@ -139,6 +146,7 @@ class RobotController(Node):
 
         x, y, z, rx, ry, rz = robot_pos
         base2gripper = self.get_robot_pose_matrix(x, y, z, rx, ry, rz)
+        self.get_position_client = self.create_client(SrvDepthPosition, "/get_3d_position")
 
         # 좌표 변환 (그리퍼 → 베이스)
         base2cam = base2gripper @ gripper2cam
@@ -146,47 +154,120 @@ class RobotController(Node):
 
         return td_coord[:3]
 
+    def pick_and_place(self, target_name):
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+        
+        if target_name:
+            self.target_pos = self.get_target_pos(target_name)
+
+        approach_pos = self.target_pos.copy()
+        approach_pos[2] += 120  # z축 위로 접근
+
+        movel(approach_pos, vel=VELOCITY, acc=ACC)
+        movel(self.target_pos, vel=VELOCITY, acc=ACC)
+
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+        self.target_pos[2]+=120
+        movel(self.target_pos, vel=VELOCITY, acc=ACC)
+        mwait()
+        movel(BED_POSITION, vel=VELOCITY, acc=ACC)
+        # movel(posx(515.02, -92.82, 286.32, -124.65, 150.51, -94.51), vel=VELOCITY, acc=ACC)        
+        let = [BED_POSITION[0], BED_POSITION[1], BED_POSITION[2]-120, *BED_POSITION[3:]]           
+        movel(let, vel=20, acc=ACC)
+        mwait()
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+
+    def pick_and_place_pillow(self, target_name):
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+
+        if target_name:
+            self.target_pos = self.get_target_pos(target_name)
+
+        approach_pos = self.target_pos.copy()
+        approach_pos[2] += 120  # z축 위로 접근
+
+        movel(approach_pos, vel=VELOCITY, acc=ACC)
+        movel(self.target_pos, vel=VELOCITY, acc=ACC)
+
+        movel(self.target_pos, vel=VELOCITY, acc=ACC)
+        gripper.close_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+        self.target_pos[2]+=120
+        movel(self.target_pos, vel=VELOCITY, acc=ACC)
+        mwait()
+        temp_leave = BED_POSITION.copy()
+        temp_leave[1] += 100
+        movel(temp_leave, vel=VELOCITY, acc=ACC)
+        # movel(posx(515.02, -92.82, 286.32, -124.65, 150.51, -94.51), vel=VELOCITY, acc=ACC)        
+        let = [temp_leave[0], temp_leave[1], temp_leave[2]-120, *temp_leave[3:]]           
+        movel(let, vel=20, acc=ACC)
+        mwait()
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
 
     def init_robot(self):
         movej([0, 0, 90, 0, 90, 0], vel=VELOCITY, acc=ACC)
         gripper.open_gripper()
         mwait()
 
-    def pick_and_place(self, pick_pose, place_pose):
-        movel(pick_pose, vel=VELOCITY, acc=ACC)
-        mwait()
-        gripper.close_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.2)
-        mwait()
-        movel(place_pose, vel=VELOCITY, acc=ACC)
-        mwait()
-        gripper.open_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.2)
-        mwait()
+
 
     def pat_motion(self, pos):
         ##########################토닥이기 위 아래 좌표 잡기##################
-        top = [pos[0], pos[1], pos[2]-120, *pos[3:]]
-        bottom = [pos[0], pos[1], pos[2] -140, *pos[3:]]
-
+        top = [pos[0], pos[1]-40, pos[2]-80, *pos[3:]]
+        bottom = [pos[0], pos[1]-40, pos[2] -130, *pos[3:]]
+        movel(top, vel=VELOCITY, acc=ACC)
+        mwait()
         gripper.close_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.2)
-
+        mwait()
         for _ in range(3):
             movel(bottom, vel=VELOCITY, acc=ACC)
             mwait()
             movel(top, vel=VELOCITY, acc=ACC)
             mwait()
+            top[1] += 40
+            bottom[1] += 40
+
+    def get_target_pos(self, target):
+        self.get_position_request.target = target
+        self.get_logger().info("call depth position service with object_detection node")
+        get_position_future = self.get_position_client.call_async(self.get_position_request)
+        rclpy.spin_until_future_complete(self, get_position_future)
+
+        if get_position_future.result():
+            result = get_position_future.result().depth_position.tolist()
+            self.get_logger().info(f"Received depth position: {result}")
+            if sum(result) == 0:
+                print("No target position")
+                return None
+
+            gripper2cam_path = os.path.join(package_path, "resource", "T_gripper2camera.npy")
+            robot_posx = get_current_posx()[0]
+            td_coord = self.transform_to_base(result, gripper2cam_path, robot_posx)
+
+            if td_coord[2] and sum(td_coord) != 0:
+                td_coord[2] += DEPTH_OFFSET  # z값 보정
+                td_coord[2] = max(td_coord[2], MIN_DEPTH)  # 최소 깊이 보장
+
+            target_pos = list(td_coord[:3]) + robot_posx[3:]  # 위치 + 자세
+        return target_pos
 
     def run_yolo_control(self):
-        while True:
+        while rclpy.ok():
             if self.rgb_image is None:
                 self.get_logger().warn("RGB image not received yet.")
                 rclpy.spin_once(self, timeout_sec=0.1)
-                continue            
+                continue
 
             frame = self.rgb_image.copy()  # 최신 프레임 복사
             results = self.model(frame)[0]
@@ -207,24 +288,27 @@ class RobotController(Node):
                 elif label == "blanket":
                     blanket_box = (x1, y1, x2, y2)
                     cx, cy, angle = self.get_blanket_angle_and_center(frame, x1, y1, x2, y2)
-                    center = (cx, cy)
-            
-            gripper2cam_path = os.path.join(package_path, "resource", "T_gripper2camera.npy")
-            robot_pos = get_current_posx()[0]
 
             if blanket_box and not bed_box and not pillow_box:
                 print("정렬완료")
                 self.pat_motion(BED_POSITION)
                 break
+            
 
             elif blanket_box and pillow_box and not bed_box:
                 print("이불만 침대 위에")
-                px = (pillow_box[0] + pillow_box[2]) // 2
-                py = (pillow_box[1] + pillow_box[3]) // 2
-                depth = self.get_depth_from_sensor(px, py)
-                cam_coords = self.convert_pixel_to_3d(px, py, depth)
-                pillow_pos = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos) + robot_pos[3:]
-                break
+
+                bed_center_x = (blanket_box[0] + blanket_box[2])/2
+                pillow_center_x = (pillow_box[0]+pillow_box[2])/2
+
+                if abs(bed_center_x - pillow_center_x) < 80:
+                    current_joints = get_current_posj()  # [j1, j2, j3, j4, j5, j6]
+                    # 마지막 조인트(j6)만 변경
+                    target_joints = current_joints.copy()
+                    target_joints[5] += 45  # 예: 30도 회전 (상황에 따라 -도 가능)
+                    target_joints[5] += 45 
+
+                self.pick_and_place(self.extraction_test[0])
 
             elif blanket_box and pillow_box and bed_box:
                 print("다 어질러짐")
@@ -234,63 +318,86 @@ class RobotController(Node):
 
                 if bx1 <= px <= bx2 and by1 <= py <= by2:
                     print("배개는 침대 위에")
-                    depth = self.get_depth_from_sensor(px, py)
-                    cam_coords = self.convert_pixel_to_3d(px, py, depth)
-                    pillow_pos = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos) + robot_pos[3:]
+                    self.pick_and_place_pillow(self.extraction_test[0])
+                    self.pick_and_place(self.extraction_test[1])
 
-                    print("배개 치우기")
-                    TEMP_POS = [pillow_pos[0], pillow_pos[1] + 100, pillow_pos[2], 0, 0, 0]
-                    self.pick_and_place(pillow_pos, TEMP_POS)
-
-                    x, y = int(center[0]), int(center[1])
-                    depth = self.get_depth_from_sensor(x, y)
-                    cam_coords = self.convert_pixel_to_3d(x, y, depth)
-                    blanket_xyz = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos)
-                    blanket_pos = list(blanket_xyz) + list(robot_pos[3:])
                     print("이불 ")
-                    if angle > 90 - ANGLE_THRESHOLD and angle < 90 + ANGLE_THRESHOLD:
+                    if angle < 90 - ANGLE_THRESHOLD or angle > 90 + ANGLE_THRESHOLD:
                         #############그리퍼 방향 돌리기#############
+                        # blanket_pos[5] += 90
+                        current_joints = get_current_posj()  # [j1, j2, j3, j4, j5, j6]
+
+                        # 마지막 조인트(j6)만 변경
+                        target_joints = current_joints.copy()
+                        target_joints[5] += 45  # 예: 30도 회전 (상황에 따라 -도 가능)
+                        target_joints[5] += 45 
+
+                        # 이동 명령
+                        movej(target_joints, vel=50, acc=50)
+                        mwait()
                         print("돌려")
                     print("집기")
-                    self.pick_and_place(blanket_pos, BED_POSITION)
-                    self.pat_motion(BED_POSITION)
+                    self.pick_and_place(self.extraction_test[1])
+                    mwait()
+                    movej([0,0,90,0,90,0], vel=VELOCITY, acc=ACC)
+                    mwait()
 
                     print("배개 집기")
-                    self.pick_and_place(TEMP_POS, BED_POSITION)
+                    self.pick_and_place(self.extraction_test[1])
+                    movej([0,0,90,0,90,0], vel=VELOCITY, acc=ACC)
+                    mwait()
                     break
 
                 else:
                     print("배개도 침대 아래")
-                    x, y = int(center[0]), int(center[1])
-                    depth = self.get_depth_from_sensor(x, y)
-                    cam_coords = self.convert_pixel_to_3d(x, y, depth)
-                    blanket_xyz = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos)
-                    blanket_pos = list(blanket_xyz) + list(robot_pos[3:])
+                    
                     print("이불 ")
-                    if angle > 90 - ANGLE_THRESHOLD and angle < 90 + ANGLE_THRESHOLD:
+                    if angle < 90 - ANGLE_THRESHOLD or angle > 90 + ANGLE_THRESHOLD:
                         #############그리퍼 방향 돌리기#############
+                        # blanket_pos[5] += 90
+                        current_joints = get_current_posj()  # [j1, j2, j3, j4, j5, j6]
+
+                        # 마지막 조인트(j6)만 변경
+                        target_joints = current_joints.copy()
+                        target_joints[5] += 45  # 예: 30도 회전 (상황에 따라 -도 가능)
+                        target_joints[5] += 45 
+
+                        # 이동 명령
+                        movej(target_joints, vel=50, acc=50)
+                        mwait()
+
                         print("돌려")
 
                     print("집기")
-                    self.pick_and_place(blanket_pos, BED_POSITION)
+                    self.pick_and_place(self.extraction_test[1])
                     self.pat_motion(BED_POSITION)
+                    movej([0,0,90,0,90,0], vel=VELOCITY, acc=ACC)
+                    mwait()
 
                     print("배개 집기")
-                    depth = self.get_depth_from_sensor(px, py)
-                    cam_coords = self.convert_pixel_to_3d(px, py, depth)
-                    pillow_pos = self.transform_to_base(cam_coords, gripper2cam_path, robot_pos) + robot_pos[3:]
+                    bed_center_x = (bed_box [0]+bed_box[2])/2
+                    pillow_center_x = (pillow_box[0]+pillow_box[2])/2
 
-                    self.pick_and_place(pillow_pos, BED_POSITION)
+                    print(abs(bed_center_x - pillow_center_x))
+
+                    if abs(bed_center_x - pillow_center_x) < 80:
+                        print(abs(bed_center_x - pillow_center_x))
+                        current_joints = get_current_posj()  # [j1, j2, j3, j4, j5, j6]
+                        print("배개 위치 회전")
+                        # 마지막 조인트(j6)만 변경
+                        target_joints = current_joints.copy()
+                        target_joints[5] += 45  # 예: 30도 회전 (상황에 따라 -도 가능)
+                        target_joints[5] += 45 
+                        movej(target_joints, vel=50, acc=50)
+                        mwait()
+
+                    self.pick_and_place(self.extraction_test[0])
+                    movej([0,0,90,0,90,0], vel=VELOCITY, acc=ACC)
+                    mwait()
                     break
-
             elif blanket_box and not pillow_box and not bed_box:
                 break
-
-            cv2.imshow("YOLO Detection", frame)
-            if cv2.waitKey(1) & 0xFF == 27:
-                break
-
-        cv2.destroyAllWindows()
+            break
 
     def get_blanket_angle_and_center(self, frame, x1, y1, x2, y2):
         margin = 0.15
