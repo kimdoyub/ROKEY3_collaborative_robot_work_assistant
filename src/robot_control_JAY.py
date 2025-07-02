@@ -9,7 +9,6 @@ import DR_init  # DSR 로봇 초기화 관련
 
 # ROS2 서비스 정의
 from od_msg.srv import SrvDepthPosition  # 3D 좌표 요청 서비스
-
 from ament_index_python.packages import get_package_share_directory
 from robot_control.onrobot import RG  # OnRobot 그리퍼 컨트롤 클래스
 
@@ -116,30 +115,34 @@ class RobotController(Node):
 
         #####################################################
         ################# Coffee Preparation ################
-        #####################################################
-        self.init_robot_cup()  # 매 픽앤플레이스 후 초기화
+        ####################################################
+        # self.init_robot_cup()  # 매 픽앤플레이스 후 초기화
         # self.pick_and_place_cup()
         # self.init_robot()
         # self.pick_and_place_filter()
-        if self.extraction_test[0]:
-            self.coffee_flavor = self.extraction_test[2]
-        else:
-            self.get_logger().info('Coffee Keyword not received')
+        # if self.extraction_test[0]:
+        #     self.coffee_flavor = self.extraction_test[2]
+        # else:
+        #     self.get_logger().info('Coffee Keyword not received')
         # self.pick_and_place_bean(self.coffee_flavor)
         # self.pick_and_place_kettle()
-        self.pick_and_place_remove_filter()
+        # self.pick_and_place_remove_filter()
         # self.init_robot()  # 매 픽앤플레이스 후 초기화
 
         # #####################################################
         # ################# Cereal Preparation ################
         # #####################################################
-        # # init 위치 맞춰줄 것
-        # self.init_robot_bowl()
-        # self.pick_and_place_cup()
-        # self.init_robot_cereal()
-        # self.pick_and_place_cereal()
-        # self.init_robot_milk()
-        # self.pick_and_place_milk()
+        # init 위치 맞춰줄 것
+        self.init_robot_bowl()
+        self.pick_and_place_bowl()
+        self.init_robot_cereal()
+        if self.extraction_test[1]:
+            self.cereal_flavor = self.extraction_test[3]
+        else:
+            self.get_logger().info('Cereal')
+        self.pick_and_place_cereal(self.cereal_flavor)
+        self.init_robot_milk()
+        self.pick_and_place_milk()
 
     ################################################################
     ################# Coffee Preparation Definition ################
@@ -272,6 +275,7 @@ class RobotController(Node):
         gripper.close_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
+
         movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         movel(posx(642.32, -343.08, 375.0, 151.58, -90, 180), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
         movel(posx(646.99, -333.08, 352.71, 152.17, -88.88, -179.75), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
@@ -279,8 +283,9 @@ class RobotController(Node):
         gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
-        movel(posx(642.31, -190.70, 341.91, 151.58, -90, 180.0), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
-        movej(JReady, vel=VELOCITY, acc=ACC)
+
+        # movel(posx(642.31, -190.70, 341.91, 151.58, -90, 180.0), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
+        # movej(JReady, vel=VELOCITY, acc=ACC)
 
 
 
@@ -316,21 +321,31 @@ class RobotController(Node):
     def pick_and_place_bowl(self):
         JReady = [0, 0, 90, 0, 90, 0] # bo
 
-        movel(vel=VELOCITY, acc=ACC) # bowl 있는 곳으로 이동 # x,y,z 보정 예정
-        mwait()
+        movel(posx(487.96,251.26,195.40,98.06,179.97,97.91), vel=VELOCITY, acc=ACC) # bowl 있는 곳 위로 이동
+        movel(posx(520.26, 240.05, 40.85, 98.06,179.97,97.91), vel=VELOCITY, acc=ACC)
+
+        # movel(self.target_pos, vel=VELOCITY, acc=ACC)
+        # mwait()
         gripper.close_gripper() # 잡기
         # 그리퍼 닫힐 때까지 대기
         while gripper.get_status()[0]:
             time.sleep(0.5)
         mwait()
-
-        movej(JReady, vel=VELOCITY, acc=ACC) # 잡은 후 위로 이동
-        movej() # bowl 두는 곳으로 이동
-        movel() # 내려가기
-        gripper.open_gripper() # 내려놓기 # force로도 처리 가능
+        
+        movel(posx(487.96,251.26,195.40,98.06,179.97,97.91), vel=VELOCITY, acc=ACC) # bowl 있는 곳 위로 이동
+        movel(posx(233.19,-213.16,195.40,120.71,179.97,120.56), vel=VELOCITY, acc=ACC) # bowl 있는 곳 위로 이동
+        movel(posx(233.19,-213.16,50.00,120.71,179.97,120.56), vel=VELOCITY, acc=ACC) # bowl 있는 곳 위로 이동
+        gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
-        movej(JReady, vel=VELOCITY, acc=ACC) # 잡은 후 위로이동 
+
+        movej(JReady, vel=VELOCITY, acc=ACC) # 잡은 후 위로 이동
+        # movej() # bowl 두는 곳으로 이동
+        # movel() # 내려가기
+        # gripper.open_gripper() # 내려놓기 # force로도 처리 가능
+        # while gripper.get_status()[0]:
+        #     time.sleep(0.5)
+        # movej(JReady, vel=VELOCITY, acc=ACC) # 잡은 후 위로이동 
     
     def init_robot_cereal(self):
         JReady_cereal = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11] # Cereal 인식 위치
@@ -338,31 +353,30 @@ class RobotController(Node):
         gripper.open_gripper()
         mwait()
 
-    def pick_and_place_cereal(self):
+    def pick_and_place_cereal(self, cereal_name):
         JReady_cereal = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11]
-        movel(vel=VELOCITY, acc=ACC) # cereal로 이동
+        if cereal_name:
+            self.target_pos = self.get_target_pos(cereal_name)
+            # self.target_pos[0] += 40
+            self.target_pos[1] -= 50
+            # self.target_pos[2] -= 20
+        movel(self.target_pos,vel=VELOCITY,acc=ACC) # cereal로 이동
         mwait()
-        gripper.close_gripper() # 잡기
-
-        # 그리퍼 닫힐 때까지 대기
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
-        mwait()
-
-        movej(JReady_cereal, vel=VELOCITY, acc=ACC) # 잡은 후 위로 이동
-        movej() # bowl 위로 이동
-        movel() # 내려가기
-        move_periodic() # 시리얼 회전으로 붓기 # 수정
-        movel() # 올라가기
-        movej(JReady_cereal, vel=VELOCITY, acc=ACC) # 잡은 후 위로 이동
-        movej() # 시리얼 둘 위치로 이동
-        movel() # 정밀하게 이동
-
-        gripper.open_gripper() # 내려놓기 # force로도 처리 가능
+        gripper.move_gripper(680)
         while gripper.get_status()[0]:
             time.sleep(0.5)
 
-        movel() # 정밀하게 후퇴
+        movej(JReady_cereal, vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 282.67, 90.25, -89.76, -89.87), vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 122.47, 90.25, -132.52, -89.87), vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 122.47, 90.25, -89.76, -89.87), vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 282.67, 90.25, -89.76, -89.87), vel=VELOCITY, acc=ACC)
+        self.target_pos[2] += 20
+        movel(self.target_pos,vel=VELOCITY,acc=ACC) # cereal로 이동
+        gripper.open_gripper()
+        while gripper.get_status()[0]:
+            time.sleep(0.5)
+
 
     def init_robot_milk(self):
         JReady_milk = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11] # Milk 인식 위치
@@ -370,31 +384,40 @@ class RobotController(Node):
         gripper.open_gripper()
         mwait()
 
-    def pick_and_place_milk(self):
-        JReady_milk = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11]
-        movel(vel=VELOCITY, acc=ACC) # milk로 이동
+    def pick_and_place_milk(self, milk='milk'):
+        JReady_milk = [12.95, 19.23, 107.16, 97.72, -100.42, 37.11] # Milk 인식 위치
+        if milk:
+            self.target_pos = self.get_target_pos(milk)
+            self.target_pos[0] -= 40
+            # self.target_pos[2] -= 20
+        movel(self.target_pos,vel=VELOCITY,acc=ACC) # cereal로 이동
+        self.target_pos[1] -= 50
+        movel(self.target_pos,vel=VELOCITY,acc=ACC) # cereal로 이동
         mwait()
-        
-        gripper.close_gripper() # 잡기
-        # 그리퍼 닫힐 때까지 대기
+        gripper.move_gripper(680)
         while gripper.get_status()[0]:
             time.sleep(0.5)
-        mwait()
+        self.target_pos[0] -= 50
+        self.target_pos[1] += 100
 
-        movej(JReady_milk, vel=VELOCITY, acc=ACC) # 잡은 후 위로 이동
-        movej() # bowl 위로 이동
-        movel() # 내려가기
-        move_periodic() # milk 회전으로 붓기
-        movel() # 올라가기
-        movej(JReady_milk, vel=VELOCITY, acc=ACC) # 잡은 후 위로 이동
-        movej() # milk 둘 위치로 이동
-        movel() # 정밀하게 이동
+        movel(self.target_pos,vel=VELOCITY,acc=ACC) # cereal로 이동
+        self.target_pos[1] -= 100
 
-        gripper.open_gripper() # 내려놓기 # force로도 처리 가능
+        # movej(JReady_milk, vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 282.67, 90.25, -89.76, -89.87), vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 122.47, 90.25, -132.52, -89.87), vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 122.47, 90.25, -89.76, -89.87), vel=VELOCITY, acc=ACC)
+        movel(posx(299.18, -120.39, 282.67, 90.25, -89.76, -89.87), vel=VELOCITY, acc=ACC)
+        self.target_pos[2] += 20
+        movel(self.target_pos,vel=VELOCITY,acc=ACC)
+        gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
+        self.target_pos[0] += 80
 
-        movel() # 정밀하게 후퇴
+        self.target_pos[1] += 80
+        movel(self.target_pos,vel=VELOCITY,acc=ACC) # cereal로 이동
+        movej(JReady_milk, vel=VELOCITY, acc=ACC)
 
 
 # 메인 함수
