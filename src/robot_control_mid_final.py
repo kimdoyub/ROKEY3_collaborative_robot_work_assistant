@@ -60,12 +60,14 @@ class RobotController(Node):
         self.get_position_request = SrvDepthPosition.Request()
         self.extraction_test = [True, True, 'bitter', 'frosed'] # frosed choco
         self.target_pos = []
+
+        ########################################################################
         self.file_path_put_obj = "/home/rokey/Desktop/NoObjPutObj.wav"
         self.file_path_put_obj2 = "/home/rokey/Desktop/NoObjTurnOff.wav"
 
         self.wave_obj = sa.WaveObject.from_wave_file(self.file_path_put_obj)
         self.wave_obj2 = sa.WaveObject.from_wave_file(self.file_path_put_obj2)
-
+        ########################################################################
 
 
 
@@ -129,39 +131,39 @@ class RobotController(Node):
         # ####################################################
         # ################ Coffee Preparation ################
         # ####################################################
-        self.init_robot_cup() # 컵을 잡기 위한 정렬
+        # self.init_robot_cup() # 컵을 잡기 위한 정렬
         self.pick_and_place_cup() # 컵을 잡고 제조 장소로 옮김
-        self.init_robot() # 홈 위치 정렬
-        self.pick_and_place_filter() # 필터를 컵 위에 둚
+        # self.init_robot() # 홈 위치 정렬
+        # self.pick_and_place_filter() # 필터를 컵 위에 둚
 
-        # keyword 리스트 중 커피 맛만 추출해서 변수 저장
-        if self.extraction_test[0]:
-            self.coffee_flavor = self.extraction_test[2]
-        else:
-            self.get_logger().info('Coffee Keyword not received')
+        # # keyword 리스트 중 커피 맛만 추출해서 변수 저장
+        # if self.extraction_test[0]:
+        #     self.coffee_flavor = self.extraction_test[2]
+        # else:
+        #     self.get_logger().info('Coffee Keyword not received')
 
-        self.pick_and_place_bean(self.coffee_flavor) # 원하는 커피원두 붓기
-        self.pick_and_place_kettle() # 커피 뜨거운 물 붓기
-        self.pick_and_place_remove_filter() # 필터 제거하기
-        self.init_robot()  # 홈 위치 정렬
+        # self.pick_and_place_bean(self.coffee_flavor) # 원하는 커피원두 붓기
+        # self.pick_and_place_kettle() # 커피 뜨거운 물 붓기
+        # self.pick_and_place_remove_filter() # 필터 제거하기
+        # self.init_robot()  # 홈 위치 정렬
 
-        # #####################################################
-        # ################# Cereal Preparation ################
-        # #####################################################
-        self.init_robot_bowl() # 그릇을 잡기 위한 준비
-        self.pick_and_place_bowl() # 그릇을 시리얼 제조 장소로 이동
-        self.init_robot_cereal() # 시리얼을 잡기 위한 초기화
+        # # #####################################################
+        # # ################# Cereal Preparation ################
+        # # #####################################################
+        # self.init_robot_bowl() # 그릇을 잡기 위한 준비
+        # self.pick_and_place_bowl() # 그릇을 시리얼 제조 장소로 이동
+        # self.init_robot_cereal() # 시리얼을 잡기 위한 초기화
         
-        # keyword 리스트 중 시리얼 맛만 추출해서 변수 저장
-        if self.extraction_test[1]:
-            self.cereal_flavor = self.extraction_test[3]
-        else:
-            self.get_logger().info('Cereal')
+        # # keyword 리스트 중 시리얼 맛만 추출해서 변수 저장
+        # if self.extraction_test[1]:
+        #     self.cereal_flavor = self.extraction_test[3]
+        # else:
+        #     self.get_logger().info('Cereal')
 
-        self.pick_and_place_cereal(self.cereal_flavor) # 시리얼을 잡아서 그릇에 붓기
-        self.init_robot_milk() # 우유를 잡기 위한 홈 정렬
-        self.pick_and_place_milk() # 우유를 붓기
-        self.init_robot()  # 홈 위치 정렬
+        # self.pick_and_place_cereal(self.cereal_flavor) # 시리얼을 잡아서 그릇에 붓기
+        # self.init_robot_milk() # 우유를 잡기 위한 홈 정렬
+        # self.pick_and_place_milk() # 우유를 붓기
+        # self.init_robot()  # 홈 위치 정렬
 
     ################################################################
     ################# Coffee Preparation Definition ################
@@ -178,7 +180,9 @@ class RobotController(Node):
         movej(posj(37.61, 10.65, 84.71, -0.05, 84.61, 37.58), vel=VELOCITY, acc=ACC) # 커피 제조 장소 # 좌표 따기
         movel(posx(345.72, 275.72, 44.08, 69.81, 179.96, 69.63), vel=VELOCITY, acc=ACC) # 내려가기  ############## force control로 바꾸기
         
-        ###############################################################################
+        
+        # grip close 대신 사용 #
+        ########################################################################
         for i in range(3):
             gripper.close_gripper()
             while gripper.get_status()[0]:
@@ -191,12 +195,12 @@ class RobotController(Node):
                     if i == 2:
                         play_obj2 = self.wave_obj2.play()
                         play_obj2.wait_done()  # 재생이 끝날 때까지 대기
-                        break
+                        self.init_robot()
+                        sys.exit()
                     play_obj = self.wave_obj.play()
                     play_obj.wait_done()  # 재생이 끝날 때까지 대기
-                    time.sleep(5)
-        ###################################################################################
-
+                    time.sleep(3)
+        ########################################################################
 
         movej(posj(-21.8, 30.31, 57.42, -0.09, 92.28, -21.85),vel=VELOCITY, acc=ACC) # 두는 곳 위
         movel(posx(536.07, -206.49, 45.0, 72.51, 179.97, 72.33), vel=VELOCITY, acc=ACC) # 내려 놓기
