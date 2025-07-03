@@ -7,6 +7,9 @@ import rclpy
 from rclpy.node import Node
 import DR_init  # DSR 로봇 초기화 관련
 
+import simpleaudio as sa
+
+
 # ROS2 서비스 정의
 from od_msg.srv import SrvDepthPosition  # 3D 좌표 요청 서비스
 from ament_index_python.packages import get_package_share_directory
@@ -14,7 +17,6 @@ from robot_control.onrobot import RG  # OnRobot 그리퍼 컨트롤 클래스
 
 # 패키지 경로 가져오기
 package_path = get_package_share_directory("pick_and_place_voice")
-
 # 로봇 설정
 ROBOT_ID = "dsr01"
 ROBOT_MODEL = "m0609"
@@ -58,6 +60,14 @@ class RobotController(Node):
         self.get_position_request = SrvDepthPosition.Request()
         self.extraction_test = [True, True, 'bitter', 'frosed'] # frosed choco
         self.target_pos = []
+        self.file_path_put_obj = "/home/rokey/Desktop/NoObjPutObj.wav"
+        self.file_path_put_obj2 = "/home/rokey/Desktop/NoObjTurnOff.wav"
+
+        self.wave_obj = sa.WaveObject.from_wave_file(self.file_path_put_obj)
+        self.wave_obj2 = sa.WaveObject.from_wave_file(self.file_path_put_obj2)
+
+
+
 
     # 위치(x,y,z) + 회전(rx,ry,rz) 정보를 4x4 변환 행렬로 변환
     def get_robot_pose_matrix(self, x, y, z, rx, ry, rz):
@@ -118,7 +128,7 @@ class RobotController(Node):
 
         # ####################################################
         # ################ Coffee Preparation ################
-        # ###################################################
+        # ####################################################
         self.init_robot_cup() # 컵을 잡기 위한 정렬
         self.pick_and_place_cup() # 컵을 잡고 제조 장소로 옮김
         self.init_robot() # 홈 위치 정렬
@@ -153,7 +163,6 @@ class RobotController(Node):
         self.pick_and_place_milk() # 우유를 붓기
         self.init_robot()  # 홈 위치 정렬
 
-  
     ################################################################
     ################# Coffee Preparation Definition ################
     #####################################################3##########
@@ -168,9 +177,26 @@ class RobotController(Node):
         # 컵 옮기기
         movej(posj(37.61, 10.65, 84.71, -0.05, 84.61, 37.58), vel=VELOCITY, acc=ACC) # 커피 제조 장소 # 좌표 따기
         movel(posx(345.72, 275.72, 44.08, 69.81, 179.96, 69.63), vel=VELOCITY, acc=ACC) # 내려가기  ############## force control로 바꾸기
-        gripper.close_gripper()
-        while gripper.get_status()[0]:
-            time.sleep(0.5)
+        
+        ###############################################################################
+        for i in range(3):
+            gripper.close_gripper()
+            while gripper.get_status()[0]:
+                time.sleep(0.5)
+            if gripper.get_status()[1]:
+                break
+            else:
+                gripper.open_gripper()
+                while gripper.get_status()[0]:
+                    if i == 2:
+                        play_obj2 = self.wave_obj2.play()
+                        play_obj2.wait_done()  # 재생이 끝날 때까지 대기
+                        break
+                    play_obj = self.wave_obj.play()
+                    play_obj.wait_done()  # 재생이 끝날 때까지 대기
+                    time.sleep(5)
+        ###################################################################################
+
 
         movej(posj(-21.8, 30.31, 57.42, -0.09, 92.28, -21.85),vel=VELOCITY, acc=ACC) # 두는 곳 위
         movel(posx(536.07, -206.49, 45.0, 72.51, 179.97, 72.33), vel=VELOCITY, acc=ACC) # 내려 놓기
@@ -299,6 +325,7 @@ class RobotController(Node):
         movel(posx(576.13, -157.71, 378.82, 151.25, -90, -179.5), vel=VELOCITY, acc=ACC)
         movel(posx(642.32, -343.08, 375.0, 151.58, -90, 180), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
         movel(posx(646.99, -333.08, 352.71, 152.17, -88.88, -179.75), vel=VELOCITY, acc=ACC) # 필터 잡고 위로 
+        movej(posj(-28.94, 8.81, 113.97, -0.66, -32.78, 0.51), vel=VELOCITY, acc=ACC) # movel로 따기
         gripper.open_gripper()
         while gripper.get_status()[0]:
             time.sleep(0.5)
@@ -352,7 +379,7 @@ class RobotController(Node):
         gripper.open_gripper()
         mwait()
 
-        if target_name=='frosed': # -y
+        if target_name=='frosed':
             self.target_pos = self.get_target_pos(target_name)
             current_pos = get_current_posx()[0]
             pos_x = [self.target_pos[0], *current_pos[1:]]
