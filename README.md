@@ -12,7 +12,7 @@
 ---
 
 ## 🗂️ Overview
-This project utilizes the Doosan collaborative robot M0609 to symbolically implement and prototype key construction functions commissioned by government or enterprise clients. The robot interprets architectural blueprints, performs construction tasks accordingly, and detects defective materials, offering a proof-of-concept system for automated building assistance.
+This project is designed to assist busy and tired modern individuals with their morning routines by providing breakfast, bed arrangement, and LLM-based services. For breakfast, it prepares coffee and cereal. For bed arrangement, it returns the blanket and pillow to their original positions. The LLM service provides weather updates and music recommendations based on the weather. Additionally, an exception-handling function was implemented to respond to unexpected situations.
 
 ---
 
@@ -24,26 +24,22 @@ This project utilizes the Doosan collaborative robot M0609 to symbolically imple
 ---
 ## 🧠 Assumptions for Scenario
 ![Assumptions for Scenario](images/assumptions.png)
-1. There are multiple robots in real-world scenarios; however, only the M0609 is considered in this project.
-2. Due to constraints, the steel bar plate is used to represent the blueprint.
-3. Warehouses are built in sourcing areas, and all materials are classified by workers; therefore, misclassifications may occur.
-4. There are three types of buildings.
-5. The disposal area and truck mixer are represented by cups.
-6. The building site is assumed to be a LEGO base.
+1. Coffee beans for brewing drip coffee are assumed to be stored in a coffee can.
+2. Due to constraints, the opening and closing of the cereal and milk containers are assumed to be done automatically.
+3. The M0609 workbench is assumed to serve as both a cooking area and a bedroom.
 ---
 
 ## 📖 Scenario
-1. The M0609 transports construction materials for foundation work and carries out concrete pouring.
-2. The robot interprets the blueprint by measuring the height of steel bars embedded in the plate, saving information about the building type and its position.
-3. Based on the interpreted data, the robot stacks LEGO blocks to build the structure.
-- If the gripper detects an abnormal object, the robot moves it to the disposal area.
-- Even if the robot stops due to an error or emergency, it can resume operation using system variables.
+1. The LLM model is activated and voice recognition is performed using the wake-up phrase "Hey Jarvis."
+2. At this stage, the user can choose the flavor of the coffee (bitter, nutty, or caramel) and the type of cereal (Chex Choco or Corn Frost).
+3. Coffee and cereal are prepared according to the given commands.
+4. After that, bed arrangement is carried out.
 ---
-## 🎥 Demo Video
 
+## 🎥 Demo Video
 <p align="center">
-  <a href="https://youtu.be/LTs1zqtvSvc">
-    <img src="https://img.youtube.com/vi/LTs1zqtvSvc/0.jpg" alt="Watch the video" width="600"/>
+  <a href="https://youtu.be/UUnwcfdMLlQ">
+    <img src="https://img.youtube.com/vi/UUnwcfdMLlQ/0.jpg" alt="Watch the video" width="600"/>
   </a>
 </p>
 
