@@ -49,7 +49,7 @@ This project is designed to assist busy and tired modern individuals with their 
 
 For a detailed explanation of this project, please refer to the following document:
 
-👉 [doc/F-2_협동2_김도엽_이재호_이한용_손지훈.pdf](docs/F-2_협동2_김도엽_이재호_이한용_손지훈.pdf)
+👉 [docs/F-2_협동2_김도엽_이재호_이한용_손지훈.pdf](docs/F-2_협동2_김도엽_이재호_이한용_손지훈.pdf)
 
 ---
 
