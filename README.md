@@ -29,6 +29,7 @@ This project is designed to assist busy and tired modern individuals with their 
 ---
 
 ## 📖 Scenario
+![Assumptions](images/assumptions.png)
 1. The LLM model is activated and voice recognition is performed using the wake-up phrase "Hey Jarvis."
 2. At this stage, the user can choose the flavor of the coffee (bitter, nutty, or caramel) and the type of cereal (Chex Choco or Corn Frost).
 3. Coffee and cereal are prepared according to the given commands.
