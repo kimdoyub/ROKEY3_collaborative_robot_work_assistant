@@ -23,7 +23,6 @@ This project is designed to assist busy and tired modern individuals with their 
 
 ---
 ## 🧠 Assumptions for Scenario
-![Assumptions for Scenario](images/assumptions.png)
 1. Coffee beans for brewing drip coffee are assumed to be stored in a coffee can.
 2. Due to constraints, the opening and closing of the cereal and milk containers are assumed to be done automatically.
 3. The M0609 workbench is assumed to serve as both a cooking area and a bedroom.
