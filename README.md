@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?logo=apache" />
 </p>
 
-# MyJarvice (Implementation of a Collaborative Robot Work Assistant Based on AI (Computer Vision))  
+# MyJarvis (Implementation of a Collaborative Robot Work Assistant Based on AI (Computer Vision))  
 
 **Jarvis, the smart AI robot that handles the busy modern person's morning routine** **from Doosan Robotics Rokey Bootcamp3 in 2025**
 
